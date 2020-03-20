@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="libmupdf.js"></script>
+<script>
+function run_combine() {
+    build_pngs();
+    window.build_pdf();
+}
+
+function build_pngs() {
+    // Write the files into the filesystem
+    const filenames = Object.keys(window.file_set);
+    filenames.forEach(function(filename) { 
+            FS.writeFile(filename, window.file_set[filename]);
+        });
+
+    const DPI = 96;
+
+    if( window.page_set === undefined ) {
+        window.page_set = [];
+    }
+
+    // Convert their pages into pdfs
+    filenames.forEach(function(filename) {
+            var doc = mupdf.openDocument(filename);
+            const page_count = mupdf.countPages(doc);
+            window.page_set[filename] = [];
+            for( let page = 0; page < page_count; page += 1 ) {
+                // Draw the page - indexing there starts with 1...
+                var outpng = mupdf.drawPageAsPNG(doc, page + 1, DPI);
+                window.page_set[filename].push(outpng);
+            }
+            mupdf.freeDocument(doc);
+        });
+}
+
+function add_to_file_list(filename) {
+    let list_div = document.getElementById("file-list");
+
+    let file_div = document.createElement("div");
+    file_div.setAttribute("filename", filename);
+    file_div.innerHTML = filename;
+
+    list_div.appendChild(file_div);
+}
+
+function ReadFile(file) {
+    return new Promise(function(resolve) {
+            let reader = new FileReader();
+            reader.onload = function(func_ev) {
+                let view = new Uint8Array(func_ev.target.result);
+                resolve([file.name, view]);
+            }
+            reader.readAsArrayBuffer(file);
+        });
+}
+
+async function file_change() {
+    const your_files = document.getElementById("file-selector");
+    let files = your_files.files;
+
+    if (files.length > 0) {
+        if( window.file_set === undefined ) {
+            window.file_set = {};
+        }
+        for (let fileIndex = 0; fileIndex < files.length; ++fileIndex) {
+            let [filename, content] = await ReadFile(files[fileIndex]);
+            window.file_set[filename] = content;
+            add_to_file_list(filename);
+        }
+    }
+}
+
+</script>
+  <script type='module'>
+    import { buildInputFile, execute, loadImageElement, call } from './magickApi.js';
+    //import * as Magick from 'https://knicknic.github.io/wasm-imagemagick/magickApi.js';
+
+    async function build_pdf() {
+        // Get file ordering
+        let list_div = document.getElementById("file-list");
+        const filenames = Object.values(list_div.children).map(function (elem) {
+                return elem.getAttribute("filename");
+            });
+
+        // Build input file set, with each page as an array inside
+        const input_files_pages = filenames.map(function (filename) {
+                console.log("Converting: ", filename);
+                const file_pages = window.page_set[filename];
+                return file_pages.map(function (page_png, index) {
+                        console.log("  Page: ", index);
+                        const b64_tell = "base64,";
+                        const b64_loc = page_png.indexOf(b64_tell);
+                        const png_start = b64_loc + b64_tell.length + 1;
+                        const file_base64 = decodeURI(page_png.slice(png_start));
+                        const file_bin = window.atob(file_base64);
+
+                        // See if we need to add on the PNG IEND chunk checksum
+                        // This is because it's missing in what mupdf outputs
+                        // But convert needs it
+                        let do_extra_three = false;
+                        let buff_len = file_bin.length;
+                        if( file_bin.charCodeAt(file_bin.length - 3) != 0x42 ) {
+                            do_extra_three = true;
+                            buff_len += 3;
+                        }
+
+                        // Build array, copy the file in, then fix it up
+                        let file_int_arr = new Uint8Array(
+                                new ArrayBuffer(buff_len)
+                            );
+                        for (let i = 0; i < file_bin.length; i++) {
+                            file_int_arr[i] = file_bin.charCodeAt(i);
+                        }
+                        if( do_extra_three ) {
+                            file_int_arr[file_int_arr.length - 3] = 0x42;
+                            file_int_arr[file_int_arr.length - 2] = 0x60;
+                            file_int_arr[file_int_arr.length - 1] = 0x82;
+                        }
+
+                        const new_filename = filename + "_" + index + ".png";
+                        const input_file = {"name": new_filename,
+                                "content": file_int_arr};
+                        return input_file;
+                    });
+            });
+
+        // Flatten the inputs into one array instead of an array in array
+        const input_files = input_files_pages.reduce(function(accum, val) {
+                return accum.concat(val);
+            }, []);
+
+        const command_file_list = input_files.map(function(val) {
+                return val["name"];
+            });
+
+        console.log(input_files);
+
+        console.log("Beginning conversion");
+        const command = ["convert", ...command_file_list, "combined.pdf"];
+        const png_mime = "image/png";
+        const pdf_mime = "application/pdf";
+        const out_mime = pdf_mime;
+        const result = await call(input_files, command);
+
+        console.log(result);
+
+        const outputFiles = result.outputFiles[0];
+        const exitCode = result.exitCode
+
+        console.log(outputFiles);
+        console.log(exitCode);
+
+        if(exitCode === 0) {
+            console.log(outputFiles.buffer);
+            let url = URL.createObjectURL(new Blob([outputFiles.buffer], {type: pdf_mime}));
+            let anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.download = "download";
+            let click = document.createEvent("MouseEvents");
+            click.initMouseEvent("click", true, false, window, 0, 0, 0, 0, 0,
+                    false, false, false, false, 0, null);
+            anchor.dispatchEvent(click);
+        } else {
+            console.log("Failed");
+        }
+    }
+
+    window.build_pdf = build_pdf;
+  </script>
+</head>
+<body>
+
+<input type="file" id="file-selector" style="display: none;" accept=".pdf" onchange="file_change();" multiple />
+<input type="button" value="Browse..." aria-label="File Input" onclick="document.getElementById('file-selector').click();" />
+
+<div id="file-list">
+</div>
+
+<input type="button" value="Combine" onclick="run_combine();">
+<!--<textarea id="b64_out"></textarea>-->
+</body>
+</html>
