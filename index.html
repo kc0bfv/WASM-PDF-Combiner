@@ -73,11 +73,11 @@ async function file_change() {
 }
 
 </script>
-  <script type='module'>
+<script type='module'>
     import { buildInputFile, execute, loadImageElement, call } from './magickApi.js';
     //import * as Magick from 'https://knicknic.github.io/wasm-imagemagick/magickApi.js';
 
-    async function build_pdf() {
+    export async function build_pdf() {
         // Get file ordering
         let list_div = document.getElementById("file-list");
         const filenames = Object.values(list_div.children).map(function (elem) {
@@ -168,7 +168,7 @@ async function file_change() {
     }
 
     window.build_pdf = build_pdf;
-  </script>
+</script>
 </head>
 <body>
 
