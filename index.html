@@ -2,6 +2,8 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<script src="jquery-3.4.1.min.js"></script>
+<script src="jquery-ui.min.js"></script>
 <script src="libmupdf.js"></script>
 <script>
 function run_combine() {
@@ -9,39 +11,122 @@ function run_combine() {
     window.build_pdf();
 }
 
+function parse_file_list() {
+    let list_div = document.getElementById("file-list");
+    let file_list = Object.values(list_div.children).map(function(file_div) {
+            let filename = file_div.getAttribute("filename");
+            let controls_div = file_div.getElementsByClassName("controls_div")[0];
+            let start_pg_elem = controls_div.getElementsByClassName("start_pg")[0];
+            let end_pg_elem = controls_div.getElementsByClassName("end_pg")[0];
+            let quality_range = controls_div.getElementsByClassName("quality_range")[0];
+
+            let start_pg = Number(start_pg_elem.value);
+            let end_pg = Number(end_pg_elem.value);
+            let quality = Number(quality_range.value);
+
+            return {"filename": filename, "start_pg": start_pg,
+                    "end_pg": end_pg, "quality": quality};
+        });
+
+    return file_list;
+}
+
 function build_pngs() {
-    // Write the files into the filesystem
-    const filenames = Object.keys(window.file_set);
-    filenames.forEach(function(filename) { 
+    const file_list = parse_file_list();
+
+    window.page_set = [];
+
+    // Convert their pages into pngs
+    file_list.forEach(function(file_elem) {
+            const filename = file_elem["filename"];
+
+            // Write the files into the filesystem
             FS.writeFile(filename, window.file_set[filename]);
-        });
 
-    const DPI = 96;
-
-    if( window.page_set === undefined ) {
-        window.page_set = [];
-    }
-
-    // Convert their pages into pdfs
-    filenames.forEach(function(filename) {
-            var doc = mupdf.openDocument(filename);
+            const dpi = file_elem["quality"];
+            const start_pg = file_elem["start_pg"];
+            const end_pg = file_elem["end_pg"];
+            let doc = mupdf.openDocument(filename);
             const page_count = mupdf.countPages(doc);
-            window.page_set[filename] = [];
-            for( let page = 0; page < page_count; page += 1 ) {
-                // Draw the page - indexing there starts with 1...
-                var outpng = mupdf.drawPageAsPNG(doc, page + 1, DPI);
-                window.page_set[filename].push(outpng);
+            if( window.page_set[filename] === undefined ) {
+                window.page_set[filename] = [];
             }
+            for( let page = start_pg; page <= end_pg; page += 1 ) {
+                if( window.page_set[filename][page] === undefined ) {
+                    // Draw the page - indexing there starts with 1...
+                    let outpng = mupdf.drawPageAsPNG(doc, page, dpi);
+                    window.page_set[filename][page] = outpng;
+                }
+            }
+
+            // Free some resources...
             mupdf.freeDocument(doc);
+            FS.unlink(filename);
         });
+}
+
+function get_page_count(filename) {
+    FS.writeFile(filename, window.file_set[filename]);
+
+    let doc = mupdf.openDocument(filename);
+    const page_count = mupdf.countPages(doc);
+    mupdf.freeDocument(doc);
+
+    FS.unlink(filename);
+
+    return page_count;
+}
+
+function build_file_list_elem(filename) {
+    const page_count = get_page_count(filename);
+
+    let file_div = document.createElement("div");
+    let filename_div = document.createElement("div");
+    let controls_div = document.createElement("div");
+    let start_pg_input = document.createElement("input");
+    let end_pg_input = document.createElement("input");
+    let dupe_button = document.createElement("input");
+    let quality_range = document.createElement("input");
+
+    file_div.appendChild(filename_div);
+    file_div.appendChild(controls_div);
+    controls_div.appendChild(start_pg_input);
+    controls_div.appendChild(end_pg_input);
+    controls_div.appendChild(dupe_button);
+    controls_div.appendChild(quality_range);
+
+    controls_div.classList.add("controls_div");
+
+    start_pg_input.type = "text";
+    start_pg_input.classList.add("start_pg");
+    end_pg_input.type = "text";
+    end_pg_input.classList.add("end_pg");
+
+    start_pg_input.value = "1";
+    end_pg_input.value = page_count;
+
+    dupe_button.type = "text";
+    dupe_button.classList.add("dupe_button");
+    dupe_button.value = "Duplicate";
+
+    quality_range.type = "range";
+    quality_range.classList.add("quality_range");
+    quality_range.min = 30;
+    quality_range.max = 300;
+    quality_range.step = 30;
+
+    file_div.setAttribute("filename", filename);
+    file_div.setAttribute("page_count", page_count);
+
+    filename_div.innerHTML = filename;
+
+    return file_div;
 }
 
 function add_to_file_list(filename) {
     let list_div = document.getElementById("file-list");
 
-    let file_div = document.createElement("div");
-    file_div.setAttribute("filename", filename);
-    file_div.innerHTML = filename;
+    let file_div = build_file_list_elem(filename);
 
     list_div.appendChild(file_div);
 }
@@ -73,77 +158,121 @@ async function file_change() {
     }
 }
 
+function add_to_onload(func) {
+    if( document.readyState === "complete" ) { func(); }
+    if( window.onload ) {
+        let cur_onload = window.onload;
+        window.onload = function() { console.log("onload"); func(); cur_onload(); };
+    } else {
+        window.onload = func;
+    }
+}
+
+function onload_setup() {
+    let file_list_div = document.getElementById("file-list");
+    let file_sel_hidden = document.getElementById("file-selector");
+    let file_sel_button = document.getElementById("file-selector-button");
+    let combine_button = document.getElementById("combine-button");
+
+    $(file_list_div).sortable({});
+    file_sel_hidden.addEventListener("change", file_change);
+    file_sel_button.addEventListener("click", function(){file_sel_hidden.click();});
+    combine_button.addEventListener("click", run_combine);
+}
+
+add_to_onload(onload_setup);
 </script>
 <script type='module'>
     import { buildInputFile, execute, loadImageElement, call } from './magickApi.js';
     //import * as Magick from 'https://knicknic.github.io/wasm-imagemagick/magickApi.js';
 
+    function png_to_arr(page_png) {
+        const b64_tell = "base64,";
+        const b64_loc = page_png.indexOf(b64_tell);
+        const png_start = b64_loc + b64_tell.length + 1;
+        const file_base64 = decodeURI(page_png.slice(png_start));
+        const file_bin = window.atob(file_base64);
+
+        // See if we need to add on the PNG IEND chunk checksum
+        // This is because it's missing in what mupdf outputs
+        // But convert needs it
+        let do_extra_three = false;
+        let buff_len = file_bin.length;
+        if( file_bin.charCodeAt(file_bin.length - 3) != 0x42 ) {
+            do_extra_three = true;
+            buff_len += 3;
+        }
+
+        // Build array, copy the file in, then fix it up
+        let file_int_arr = new Uint8Array(
+                new ArrayBuffer(buff_len)
+            );
+        for (let i = 0; i < file_bin.length; i++) {
+            file_int_arr[i] = file_bin.charCodeAt(i);
+        }
+        if( do_extra_three ) {
+            file_int_arr[file_int_arr.length - 3] = 0x42;
+            file_int_arr[file_int_arr.length - 2] = 0x60;
+            file_int_arr[file_int_arr.length - 1] = 0x82;
+        }
+        return file_int_arr;
+    }
+
+    function calc_png_filename(filename, index) {
+        return filename + "_" + index + ".png";
+    }
+
     export async function build_pdf() {
         // Get file ordering
-        let list_div = document.getElementById("file-list");
-        const filenames = Object.values(list_div.children).map(function (elem) {
-                return elem.getAttribute("filename");
-            });
+        const file_list = parse_file_list();
 
         // Build input file set, with each page as an array inside
-        const input_files_pages = filenames.map(function (filename) {
+        const filenames = Object.keys(window.page_set);
+        // input_files_pages is an object with png_filename as key,
+        // "file" object as val
+        let input_files_pages = {};
+        filenames.forEach(function (filename) {
                 console.log("Converting: ", filename);
-                const file_pages = window.page_set[filename];
-                return file_pages.map(function (page_png, index) {
+                const file_pages = Object.keys(window.page_set[filename]);
+
+                file_pages.forEach(function (index) {
                         console.log("  Page: ", index);
-                        const b64_tell = "base64,";
-                        const b64_loc = page_png.indexOf(b64_tell);
-                        const png_start = b64_loc + b64_tell.length + 1;
-                        const file_base64 = decodeURI(page_png.slice(png_start));
-                        const file_bin = window.atob(file_base64);
+                        let page_png = window.page_set[filename][index];
+                        const file_int_arr = png_to_arr(page_png);
 
-                        // See if we need to add on the PNG IEND chunk checksum
-                        // This is because it's missing in what mupdf outputs
-                        // But convert needs it
-                        let do_extra_three = false;
-                        let buff_len = file_bin.length;
-                        if( file_bin.charCodeAt(file_bin.length - 3) != 0x42 ) {
-                            do_extra_three = true;
-                            buff_len += 3;
-                        }
-
-                        // Build array, copy the file in, then fix it up
-                        let file_int_arr = new Uint8Array(
-                                new ArrayBuffer(buff_len)
-                            );
-                        for (let i = 0; i < file_bin.length; i++) {
-                            file_int_arr[i] = file_bin.charCodeAt(i);
-                        }
-                        if( do_extra_three ) {
-                            file_int_arr[file_int_arr.length - 3] = 0x42;
-                            file_int_arr[file_int_arr.length - 2] = 0x60;
-                            file_int_arr[file_int_arr.length - 1] = 0x82;
-                        }
-
-                        const new_filename = filename + "_" + index + ".png";
+                        const new_filename = calc_png_filename(filename, index);
                         const input_file = {"name": new_filename,
                                 "content": file_int_arr};
-                        return input_file;
+                        input_files_pages[new_filename] = input_file;
                     });
             });
 
-        // Flatten the inputs into one array instead of an array in array
-        const input_files = input_files_pages.reduce(function(accum, val) {
-                return accum.concat(val);
-            }, []);
-
+        const input_files_list = Object.values(input_files_pages);
+        
+        /*
         const command_file_list = input_files.map(function(val) {
                 return val["name"];
             });
+        */
 
-        console.log(input_files);
+        let command_file_list = [];
+        file_list.forEach(function(file_elem) {
+                const filename = file_elem["filename"];
+                const start_pg = file_elem["start_pg"];
+                const end_pg = file_elem["end_pg"];
+                for( let page = start_pg; page <= end_pg; page += 1 ) {
+                    command_file_list.push(calc_png_filename(filename, page));
+                }
+            });
+
+        console.log(input_files_list);
 
         console.log("Beginning conversion");
         const command = ["convert", ...command_file_list, "combined.pdf"];
         const png_mime = "image/png";
         const pdf_mime = "application/pdf";
         const out_mime = pdf_mime;
-        const result = await call(input_files, command);
+        const result = await call(input_files_list, command);
 
         console.log(result);
 
@@ -173,13 +302,14 @@ async function file_change() {
 </head>
 <body>
 
-<input type="file" id="file-selector" style="display: none;" accept=".pdf" onchange="file_change();" multiple />
-<input type="button" value="Browse..." aria-label="File Input" onclick="document.getElementById('file-selector').click();" />
+<input type="file" id="file-selector" style="display: none;" accept=".pdf" multiple />
+<input type="button" id="file-selector-button" value="Browse..." aria-label="File Input" />
 
 <div id="file-list">
 </div>
 
-<input type="button" value="Combine" onclick="run_combine();">
+<input type="button" id="combine-button" value="Combine">
 <!--<textarea id="b64_out"></textarea>-->
+
 </body>
 </html>
