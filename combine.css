@@ -1,0 +1,14 @@
+#file-selector {
+    display: none;
+}
+.section {
+    margin: 10px;
+    padding: 10px;
+    border: solid #c3c5c4 1px;
+    border-radius: 5px;
+    background-color: #f8f7f2;
+    color: inherit;
+}
+#file-list {
+    min-height: 40px;
+}
