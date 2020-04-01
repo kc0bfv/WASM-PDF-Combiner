@@ -7,10 +7,9 @@ function parse_file_list() {
     let list_div = document.getElementById("file-list");
     let file_list = Object.values(list_div.children).map(function(file_div) {
             let filename = file_div.getAttribute("filename");
-            let controls_div = file_div.getElementsByClassName("controls_div")[0];
-            let start_pg_elem = controls_div.getElementsByClassName("start_pg")[0];
-            let end_pg_elem = controls_div.getElementsByClassName("end_pg")[0];
-            let quality_range = controls_div.getElementsByClassName("quality_range")[0];
+            let start_pg_elem = file_div.getElementsByClassName("start_pg")[0];
+            let end_pg_elem = file_div.getElementsByClassName("end_pg")[0];
+            let quality_range = file_div.getElementsByClassName("quality_range")[0];
 
             let start_pg = Number(start_pg_elem.value);
             let end_pg = Number(end_pg_elem.value);
@@ -148,8 +147,13 @@ function build_file_list_elem(filename) {
 
     let file_div = document.createElement("div");
     let filename_div = document.createElement("div");
-    let controls_div = document.createElement("div");
+    let cont_pg_div = document.createElement("div");
+    let cont_btn_div = document.createElement("div");
+    let cont_qual_div = document.createElement("div");
+
+    let start_pg_label = document.createElement("label");
     let start_pg_input = document.createElement("input");
+    let end_pg_label = document.createElement("label");
     let end_pg_input = document.createElement("input");
     let dupe_button = document.createElement("input");
     let del_button = document.createElement("input");
@@ -157,56 +161,77 @@ function build_file_list_elem(filename) {
     let qr_value = document.createElement("input");
 
     file_div.appendChild(filename_div);
-    file_div.appendChild(controls_div);
-    controls_div.appendChild(start_pg_input);
-    controls_div.appendChild(end_pg_input);
-    controls_div.appendChild(dupe_button);
-    controls_div.appendChild(del_button);
-    controls_div.appendChild(quality_range);
-    controls_div.appendChild(qr_value);
+    file_div.appendChild(cont_btn_div);
+    file_div.appendChild(cont_pg_div);
+    file_div.appendChild(cont_qual_div);
+
+    cont_pg_div.appendChild(start_pg_label);
+    cont_pg_div.appendChild(end_pg_label);
+    cont_btn_div.appendChild(dupe_button);
+    cont_btn_div.appendChild(del_button);
+
+    cont_qual_div.innerHTML = "Quality (DPI):"
+    cont_qual_div.appendChild(quality_range);
+    cont_qual_div.appendChild(qr_value);
+
+    start_pg_label.innerHTML = "Start Page: "
+    end_pg_label.innerHTML = "End Page: "
+
+    start_pg_label.appendChild(start_pg_input);
+    end_pg_label.appendChild(end_pg_input);
 
     file_div.classList.add("file_div");
-    controls_div.classList.add("controls_div");
 
-    start_pg_input.type = "text";
+    start_pg_input.type = "number";
+    start_pg_input.width = 4;
     start_pg_input.classList.add("start_pg");
     start_pg_input.addEventListener("change", validate_start_page);
-    end_pg_input.type = "text";
+    end_pg_input.type = "number";
+    end_pg_input.width = 4;
     end_pg_input.classList.add("end_pg");
     end_pg_input.addEventListener("change", validate_end_page);
 
     start_pg_input.value = 1;
     start_pg_input.setAttribute("prev_value", 1);
+    start_pg_input.min = 1;
+    start_pg_input.max = page_count;
     end_pg_input.value = page_count;
     end_pg_input.setAttribute("prev_value", page_count);
+    end_pg_input.min = 1;
+    end_pg_input.max = page_count;
 
     dupe_button.type = "button";
     dupe_button.classList.add("dupe_button");
+    dupe_button.name = "Duplicate this file entry";
     dupe_button.value = "Duplicate";
     dupe_button.addEventListener("click", dupe_file_div);
 
     del_button.type = "button";
     del_button.classList.add("del_button");
+    del_button.name = "Remove this file entry";
     del_button.value = "Delete";
     del_button.addEventListener("click", delete_file_div);
 
-    qr_value.type = "text";
+    qr_value.type = "number";
     qr_value.classList.add("qr_value");
-    qr_value.value = 120
+    qr_value.value = 120;
+    qr_value.min = 30;
+    qr_value.max = 300;
     qr_value.readOnly = true;
 
     quality_range.classList.add("quality_range");
-    quality_range.type = "range"
-    quality_range.value = qr_value.value;
+    quality_range.name = "Select page output quality for this file, 120 is a good value";
+    quality_range.type = "range";
     quality_range.min = 30;
     quality_range.max = 300;
     quality_range.step = 30;
+    quality_range.value = qr_value.value;
     quality_range.addEventListener("input", update_qr_value);
 
     file_div.setAttribute("filename", filename);
     file_div.setAttribute("page_count", page_count);
 
-    filename_div.innerHTML = filename;
+    filename_div.innerHTML = "Filename: " + filename;
 
     return file_div;
 }
@@ -248,7 +273,7 @@ function add_to_onload(func) {
     if( document.readyState === "complete" ) { func(); }
     if( window.onload ) {
         let cur_onload = window.onload;
-        window.onload = function() { console.log("onload"); func(); cur_onload(); };
+        window.onload = function() { func(); cur_onload(); };
     } else {
         window.onload = func;
     }

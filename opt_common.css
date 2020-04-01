@@ -1,1 +1,83 @@
-../relationship_graph/opt_common.css
+colors {
+    spicymustard: #d8ae47;
+    seashell: #f8f7f2;
+    gray: #626262;
+    darkergray: #222222;
+    sage: #b1ac85;
+    elephant: #c3c5c4;
+}
+:focus {
+    outline: #b1ac85 auto 1px;
+}
+html {
+    height: 100%;
+}
+body {
+    color: #222222;
+    background-color: #d8ae47;
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+}
+h1, h2, h3, h4, h5, h6 {
+    margin: 5px 10px;
+}
+#main-body {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    margin: 0 auto;
+}
+.clear-div {
+    clear: both;
+}
+#header details {
+    margin: 10px 10px;
+}
+#header h1 {
+    color: #424242;
+    font-size: 2em;
+    margin: .25em;
+    padding: .25em;
+    float: right;
+}
+#header {
+    flex-shrink: 0;
+    padding: 0 20px;
+    background: #f8f7f2;
+    border-bottom: solid #c3c5c4 1px;
+    max-height: 100%;
+    overflow-y: auto;
+}
+.help_section {
+    border: solid #c3c5c4 1px;
+    border-radius: 5px;
+    background-color: #f8f7f2;
+    padding: 10px;
+    margin: 10px;
+}
+#main-content {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+textarea, input, select, .section {
+    border: solid #c3c5c4 1px;
+    border-radius: 5px;
+    background-color: #f8f7f2;
+    color: inherit;
+}
+textarea, input, select {
+    margin: .25em;
+    padding: .25em;
+}
+.section, .subsection {
+    margin: 10px;
+    padding: 10px;
+}
+.subsection {
+    border: none;
+}
+textarea {
+    width: 100%;
+}

@@ -1,15 +1,52 @@
 </style>
 </head>
 <body>
+<div id="main-body">
+    <div id="header">
+        <h1>PDF Combiner</h1>
 
-<div id="main-controls" class="section">
-    <input type="file" id="file-selector" style="display: none;" accept=".pdf" multiple />
-    <input type="button" id="file-selector-button" value="Browse..." aria-label="File Input" />
-    <input type="button" id="combine-button" value="Combine">
+        <div id="main-controls" class="subsection">
+            <input type="file" id="file-selector" accept=".pdf" multiple />
+            <input type="button" id="file-selector-button" value="Add File" aria-label="File Input" />
+            <input type="button" id="combine-button" value="Combine">
+        </div>
+
+        <details class="clear-div">
+            <summary>Help</summary>
+            <div class="help_section">
+                <h3>Usage</h3>
+                Click "Add File" then use the file browser to select one or more PDF files.  Rearrange them, change the start and end pages, duplicate or remove them in the file list area.  Modify the quality if you wish.  The quality will have a large effect on the output file size and processing time.  I recommend 120 DPI for a good balance.
+                Click "Combine" to produce the output PDF - your browser will automatically download the result.
+            </div>
+            <div class="help_section">
+                <h3>Offline Usage</h3>
+                Download the following files, keep them in the same folder, then open index.html:
+                <ul>
+                    <li>index.html</li>
+                    <li>libmupdf.js</li>
+                    <li>libmupdf.wasm</li>
+                    <li>magick.js</li>
+                    <li>magickApi.js</li>
+                    <li>magick.wasm</li>
+                </ul>
+            </div>
+            <div class="help_section">
+                <h3>Privacy</h3>
+                <p>Aside from the files packaged with this HTML document, this tool requires no external resources and makes no external requests.  Therefore, it can make no invasion on your privacy.  You may verify these statements by using your browser's developer utilities to view network traffic - you will see that only the packaged files are loaded and no further requests occur.  You may also verify these statements by using the tool entirely in offline mode, or disconnected from the Internet.  It will work fully.</p>
+            </div>
+            <div class="help_section">
+                <h3>About</h3>
+                <p>Created by kc0bfv.  <a href="https://github.com/kc0bfv/WASM-PDF-Combiner">Source code available on Github</a>.  Color scheme by <a href="https://sarahfinley.com">his wife</a> and <a href="https://dinosaurstew.com/color-palettes/">Dinosaur Stew</a>.  Relies heavily on the <a href="https://ghostscript.com/~tor/wasm/readme.html">MuPDF WASM stuff from here</a>, which probably comes from the <a href="https://mupdf.com/">MuPDF project</a> (WASM release Aug 2019). MuPDFsource code is <a href="https://www.gnu.org/licenses/agpl-3.0.en.html">GNU AGPL licensed</a>.  Uses the <a href="https://github.com/KnicKnic/WASM-ImageMagick">WASM ImageMagick compile by KnicKnic</a>, licensed with the <a href="https://raw.githubusercontent.com/KnicKnic/WASM-ImageMagick/master/LICENSE">Apache 2.0 License</a>.</p>
+            </div>
+        </details>
+    </div>
+
+    <div id="main-content">
+
+        <div id="file-list" class="section">
+        </div>
+    </div>
+
 </div>
-
-<div id="file-list" class="section">
-</div>
-
 </body>
 </html>
