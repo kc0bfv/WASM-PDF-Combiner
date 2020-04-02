@@ -1,4 +1,4 @@
-import { call } from './magickApi_TEMP.js';
+//import { call } from './magickApi_TEMP.js';
 //import * as Magick from 'https://knicknic.github.io/wasm-imagemagick/magickApi.js';
 
 function png_to_arr(page_png) {
