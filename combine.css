@@ -34,3 +34,25 @@
 .file_div div label:last-child {
     margin-right: 0;
 }
+
+.full_modal {
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    height: 100%;
+    width: 100%;
+    z-index: 1000;
+    background-color: #d8ae47b0;
+}
+.full_modal > div {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+#combining-cover {
+    display: none;
+}
+#file-load-cover {
+    display: none;
+}

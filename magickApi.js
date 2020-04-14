@@ -3832,6 +3832,10 @@ const magickWorkerPromises = {};
 let magickWorkerPromisesKey = 1;
 // handle responses as they stream in after being outputFiles by image magick
 magickWorker.onmessage = e => {
+    if( typeof e.data === "string") {
+        window.imagemagick_loaded = (e.data == "load_status_request=true");
+        return;
+    }
     const response = e.data;
     const promise = magickWorkerPromises[response.requestNumber];
     delete magickWorkerPromises[response.requestNumber];

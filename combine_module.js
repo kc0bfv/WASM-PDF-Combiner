@@ -47,11 +47,11 @@ export async function build_pdf() {
     // "file" object as val
     let input_files_pages = {};
     filenames.forEach(function (filename) {
-            console.log("Converting: ", filename);
+            //console.log("Converting: ", filename);
             const file_pages = Object.keys(window.page_set[filename]);
 
             file_pages.forEach(function (index) {
-                    console.log("  Page: ", index);
+                    //console.log("  Page: ", index);
                     let page_png = window.page_set[filename][index];
                     const file_int_arr = png_to_arr(page_png);
 
@@ -80,25 +80,25 @@ export async function build_pdf() {
             }
         });
 
-    console.log(input_files_list);
+    //console.log(input_files_list);
 
-    console.log("Beginning conversion");
+    //console.log("Beginning conversion");
     const command = ["convert", ...command_file_list, "combined.pdf"];
     const png_mime = "image/png";
     const pdf_mime = "application/pdf";
     const out_mime = pdf_mime;
     const result = await call(input_files_list, command);
 
-    console.log(result);
+    //console.log(result);
 
     const outputFiles = result.outputFiles[0];
     const exitCode = result.exitCode
 
-    console.log(outputFiles);
-    console.log(exitCode);
+    //console.log(outputFiles);
+    //console.log(exitCode);
 
     if(exitCode === 0) {
-        console.log(outputFiles.buffer);
+        //console.log(outputFiles.buffer);
         let url = URL.createObjectURL(new Blob([outputFiles.buffer], {type: pdf_mime}));
         let anchor = document.createElement("a");
         anchor.href = url;
@@ -108,8 +108,13 @@ export async function build_pdf() {
                 false, false, false, false, 0, null);
         anchor.dispatchEvent(click);
     } else {
-        console.log("Failed");
+        //console.log("Failed");
     }
 }
 
+function update_imagemagick_loaded() {
+    magickWorker.postMessage("load_status_request");
+}
+
+window.update_imagemagick_loaded = update_imagemagick_loaded;
 window.build_pdf = build_pdf;

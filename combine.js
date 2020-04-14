@@ -1,12 +1,27 @@
 function run_combine() {
+    if( parse_file_list().length < 1 ) {
+        alert("Add some files before pressing combine");
+        return;
+    }
+
+    let combining_cover = document.getElementById("combining-cover");
+    combining_cover.style.display = "block";
+
+    run_combine_async();
+}
+
+async function run_combine_async() {
     build_pngs();
-    window.build_pdf();
+    await window.build_pdf();
+
+    let combining_cover = document.getElementById("combining-cover");
+    combining_cover.style.display = "none";
 }
 
 function parse_file_list() {
     let list_div = document.getElementById("file-list");
     let file_list = Object.values(list_div.children).map(function(file_div) {
-            let filename = file_div.getAttribute("filename");
+            let filename = file_div.getAttribute("file_set_filename");
             let start_pg_elem = file_div.getElementsByClassName("start_pg")[0];
             let end_pg_elem = file_div.getElementsByClassName("end_pg")[0];
             let quality_range = file_div.getElementsByClassName("quality_range")[0];
@@ -77,8 +92,10 @@ function get_fd_control_fd(ev) {
 }
 
 function dupe_file_div(ev) {
-    const filename = get_fd_control_fd(ev).getAttribute("filename");
-    const new_fd = build_file_list_elem(filename);
+    const file_set_filename = get_fd_control_fd(ev).getAttribute(
+            "file_set_filename");
+    const nice_filename = get_fd_control_fd(ev).getAttribute("nice_filename");
+    const new_fd = build_file_list_elem(nice_filename, file_set_filename);
     add_to_file_list(new_fd);
 }
 
@@ -142,8 +159,8 @@ function validate_end_page(ev) {
     tgt.setAttribute("prev_value", new_val);
 }
 
-function build_file_list_elem(filename) {
-    const page_count = get_page_count(filename);
+function build_file_list_elem(nice_filename, file_set_filename) {
+    const page_count = get_page_count(file_set_filename);
 
     let file_div = document.createElement("div");
     let filename_div = document.createElement("div");
@@ -228,10 +245,11 @@ function build_file_list_elem(filename) {
     quality_range.value = qr_value.value;
     quality_range.addEventListener("input", update_qr_value);
 
-    file_div.setAttribute("filename", filename);
+    file_div.setAttribute("file_set_filename", file_set_filename);
+    file_div.setAttribute("nice_filename", nice_filename);
     file_div.setAttribute("page_count", page_count);
 
-    filename_div.innerHTML = "Filename: " + filename;
+    filename_div.innerHTML = "Filename: " + nice_filename;
 
     return file_div;
 }
@@ -258,15 +276,24 @@ async function file_change() {
     let files = your_files.files;
 
     if (files.length > 0) {
+        let file_load_cover = document.getElementById("file-load-cover");
+        file_load_cover.style.display = "block";
+
         if( window.file_set === undefined ) {
             window.file_set = {};
         }
         for (let fileIndex = 0; fileIndex < files.length; ++fileIndex) {
             let [filename, content] = await ReadFile(files[fileIndex]);
-            window.file_set[filename] = content;
-            add_to_file_list(build_file_list_elem(filename));
+            const file_set_filename = filename + Date.now();
+            window.file_set[file_set_filename] = content;
+            add_to_file_list(build_file_list_elem(filename, file_set_filename));
         }
+
+        file_load_cover.style.display = "none";
     }
+
+    // Clear the file element so we can add the same file again, if desired
+    your_files.value = "";
 }
 
 function add_to_onload(func) {
@@ -289,6 +316,22 @@ function onload_setup() {
     file_sel_hidden.addEventListener("change", file_change);
     file_sel_button.addEventListener("click", function(){file_sel_hidden.click();});
     combine_button.addEventListener("click", run_combine);
+
+    // Remove modal loading window
+    let loading_cover = document.getElementById("loading-cover");
+    loading_cover.style.display = "none";
 }
 
-add_to_onload(onload_setup);
+function test_load_complete() {
+    // If loading isn't finished, give it more time
+    // mupdf.countPages is set when mupdf is done loading
+    if( mupdf.countPages !== "undefined" &&
+            window.imagemagick_loaded == true ) {
+        onload_setup();
+    } else {
+        window.update_imagemagick_loaded();
+        window.setTimeout(test_load_complete, 1000);
+    }
+}
+
+add_to_onload(test_load_complete);

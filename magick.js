@@ -124,6 +124,10 @@ processFiles = function () {
 }
 
 onmessage = function (magickRequest) {
+  if( magickRequest.data == "load_status_request" ) {
+    postMessage("load_status_request=" + Module.moduleLoaded);
+    return;
+  }
   Module.messagesToProcess.push(magickRequest.data)
   processFiles()
 }
